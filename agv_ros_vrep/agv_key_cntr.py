@@ -28,38 +28,35 @@ dir=0
 ESC = 27
 acc_dec = False
 sel = None
-wheelRotSpeedDx=20*math.pi/180
 desiredWheelRotSpeed = 0
 desiredWheelRotSpeed2 = 0
 d_ar=[]
 spd = 1 # new speed mode
+save_spd = None
 
 def nav_prem(dt,dir_x):
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
-    global wheelRotSpeedDx
     global d_ar
+    global save_spd
+    wheelRotSpeedDx=20*math.pi/180
     if dt[0]*dt[1]<0:
         # TURN
+        if save_spd == None:
+            save_spd = desiredWheelRotSpeed
         desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
         desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
         d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed2]
     else:
         # DRIVE
-        desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
-        desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
+        if save_spd is not None:
+            desiredWheelRotSpeed=save_spd+wheelRotSpeedDx*dt[0]
+            desiredWheelRotSpeed2=save_spd+wheelRotSpeedDx*dt[1]
+            save_spd = None
+        else:
+            desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
+            desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
         # FORWARD
-        if dir_x>0:
-            if desiredWheelRotSpeed < desiredWheelRotSpeed2:
-                desiredWheelRotSpeed2=desiredWheelRotSpeed
-            else:
-                desiredWheelRotSpeed=desiredWheelRotSpeed2
-        if dir_x<0:
-        # BACKWARD
-            if desiredWheelRotSpeed > desiredWheelRotSpeed2:
-                desiredWheelRotSpeed2=desiredWheelRotSpeed
-            else:
-                desiredWheelRotSpeed=desiredWheelRotSpeed2
         # ENC RESET !!!!!!
         d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed]
     return d_ar
