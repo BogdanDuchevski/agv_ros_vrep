@@ -35,6 +35,7 @@ function sysCall_init()
     -- Ok now launch the ROS client application:
     if (not pluginNotFound) then
         local sysTime=sim.getSystemTimeInMs(-1)
+        local speedTopicName='speed'
         local leftEncTopicName='leftMotorEnc'
         local rightEncTopicName='rightMotorEnc'
         local leftMotorTopicName='leftMotorSpeed'--..sysTime -- we add a random component so that we can have several instances of this robot running
@@ -42,6 +43,7 @@ function sysCall_init()
         local sensorTopicName='sensorTrigger'--..sysTime -- we add a random component so that we can have several instances of this robot running
         local simulationTimeTopicName='simTime'--..sysTime -- we add a random component so that we can have several instances of this robot running
         -- Prepare the sensor publisher and the motor speed subscribers:
+        speedTopicPub=simROS.advertise('/'..speedTopicName,'std_msgs/Float32')
         leftEncTopicPub=simROS.advertise('/'..leftEncTopicName,'std_msgs/Float32')
         rightEncTopicPub=simROS.advertise('/'..rightEncTopicName,'std_msgs/Float32')
         sensorPub=simROS.advertise('/'..sensorTopicName,'std_msgs/Bool')
@@ -55,6 +57,7 @@ function sysCall_init()
 end
 function speedChange_callback(ui,id,newVal)
 	speed=minMaxSpeed[1]+(minMaxSpeed[2]-minMaxSpeed[1])*newVal/100
+  simROS.publish(speedTopicPub,{data=speed})
 end
 function setLeftMotorVelocity_cb(msg)
     -- Left motor speed subscriber callback
