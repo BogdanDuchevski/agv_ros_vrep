@@ -19,14 +19,12 @@ import sys
 import termios
 import atexit
 from select import select
-
-
-
 import rospy, os
 from pathlib import Path
 from std_msgs.msg import Float32
 
 # - INIT
+dir=0
 ESC = 27
 acc_dec = False
 sel = None
@@ -34,37 +32,59 @@ wheelRotSpeedDx=20*math.pi/180
 desiredWheelRotSpeed = 0
 desiredWheelRotSpeed2 = 0
 d_ar=[]
+spd = 1 # new speed mode
 
-def nav_prem(dt):
+def nav_prem(dt,dir_x):
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
     global wheelRotSpeedDx
     global d_ar
-    if desiredWheelRotSpeed<5 or desiredWheelRotSpeed2<5 or desiredWheelRotSpeed>-5 or desiredWheelRotSpeed2>-5:
-        if dt[0]*dt[1]<0:
-            desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
-            desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
-            d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed2]
-        else:
-            desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
-            desiredWheelRotSpeed2=desiredWheelRotSpeed
-            d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed]
+    if dt[0]*dt[1]<0:
+        # TURN
+        desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
+        desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
+        d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed2]
+    else:
+        # DRIVE
+        desiredWheelRotSpeed=desiredWheelRotSpeed+wheelRotSpeedDx*dt[0]
+        desiredWheelRotSpeed2=desiredWheelRotSpeed2+wheelRotSpeedDx*dt[1]
+        # FORWARD
+        if dir_x>0:
+            if desiredWheelRotSpeed < desiredWheelRotSpeed2:
+                desiredWheelRotSpeed2=desiredWheelRotSpeed
+            else:
+                desiredWheelRotSpeed=desiredWheelRotSpeed2
+        if dir_x<0:
+        # BACKWARD
+            if desiredWheelRotSpeed > desiredWheelRotSpeed2:
+                desiredWheelRotSpeed2=desiredWheelRotSpeed
+            else:
+                desiredWheelRotSpeed=desiredWheelRotSpeed2
+        # ENC RESET !!!!!!
+        d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed]
     return d_ar
+
 def process(key):
+    global dir
     cmnd = []
     nav_prem_res = []
+    dir_k = None
     if key == 'x':
         exit('exitting')
     elif key == 'w':
-        cmnd = [1,1]
+        dir_k = 1
+        cmnd = [1,1,1]
     elif key == 's':
-        cmnd = [-1,-1]
+        dir_k = -1
+        cmnd = [-1,-1,-1]
     elif key == 'd':
-        cmnd = [1,-1]
+        cmnd = [1,-1,0]
     elif key == 'a':
-        cmnd = [-1,1]
+        cmnd = [-1,1,0]
     if len(cmnd)>0:
-        nav_prem_res = nav_prem(cmnd)
+        nav_prem_res = nav_prem(cmnd,dir_k)
+        #if dir_k is not None and dir*dir_k>0:
+        #    dir = dir_k
     return nav_prem_res
 
 def int_chk(s):
@@ -73,6 +93,7 @@ def int_chk(s):
         return True
     except ValueError:
         return False
+
 def talker():
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
@@ -83,7 +104,6 @@ def talker():
     rospy.init_node('rosBubbleRob', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        #key = getch.getch()
         if kbd.kbhit():
             key = kbd.getch()
             termios.tcflush(sys.stdin, termios.TCIOFLUSH)
@@ -96,6 +116,7 @@ def talker():
             aa = res[0]
             bb = res[1]
         else:
+            #desiredWheelRotSpeed = desiredWheelRotSpeed2 # - Turn only on KBHIT
             if acc_dec == True:
                 if desiredWheelRotSpeed > 0:
                     desiredWheelRotSpeed -=.1
