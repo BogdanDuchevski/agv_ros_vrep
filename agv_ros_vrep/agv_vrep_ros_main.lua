@@ -1,6 +1,22 @@
 function sysCall_init()
 
     robotHandle=sim.getObjectAssociatedWithScript(sim.handle_self)
+    xml = '<ui title="'..sim.getObjectName(robotHandle)..' speed" closeable="false" resizeable="false" activate="false">'..[[
+                <hslider minimum="0" maximum="100" on-change="speedChange_callback" id="1"/>
+            <label text="" style="* {margin-left: 300px;}"/>
+      <button enabled="true" text="Control" on-click="cll" id="6" style="* {background-color: grey;}" />
+      <button enabled="true" text="Mapping" on-click="cll" id="2" style="* {background-color: grey;}"/>
+      <button enabled="true" text="Navigation" on-click="cll" id="3" style="* {background-color: grey;}"/>
+      <button enabled="true" text="Gripper" on-click="cll" id="4" style="* {background-color: grey;}"/>
+      <button enabled="true" text="Gripper2" on-click="cll" id="5" style="* {background-color: grey;}"/>
+        </ui>
+        ]]
+    ui=simUI.create(xml)
+    -- UI SPEED SLIDER INIT
+    minMaxSpeed={50*math.pi/180,300*math.pi/180} -- Min and max speeds for each motor
+    speed=(minMaxSpeed[1]+minMaxSpeed[2])*0.5
+    simUI.setSliderValue(ui,1,100*(speed-minMaxSpeed[1])/(minMaxSpeed[2]-minMaxSpeed[1]))
+
     leftMotor=sim.getObjectHandle("bubbleRob_leftMotor") -- Handle of the left motor
     rightMotor=sim.getObjectHandle("bubbleRob_rightMotor") -- Handle of the right motor
     noseSensor=sim.getObjectHandle("bubbleRob_sensingNose") -- Handle of the proximity sensor
@@ -36,6 +52,9 @@ function sysCall_init()
         --result2=sim.launchExecutable('/home/bad/vrep_pro/src/ros_bubble_rob2/bin/rosBubbleRob2',leftMotorTopicName.." "..rightMotorTopicName.." "..sensorTopicName.." "..simulationTimeTopicName,0)
     end
 
+end
+function speedChange_callback(ui,id,newVal)
+	speed=minMaxSpeed[1]+(minMaxSpeed[2]-minMaxSpeed[1])*newVal/100
 end
 function setLeftMotorVelocity_cb(msg)
     -- Left motor speed subscriber callback
