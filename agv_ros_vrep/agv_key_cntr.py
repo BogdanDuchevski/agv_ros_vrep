@@ -34,6 +34,7 @@ d_ar=[]
 spd = 1 # new speed mode
 save_spd = None
 pub_sp = rospy.Publisher('speed', Float32, queue_size=10)
+nav_mode = True
 def nav_prem(dt,dir_x):
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
@@ -63,6 +64,15 @@ def nav_prem(dt,dir_x):
         pub_sp.publish(desiredWheelRotSpeed)
     return d_ar
 
+def nav_prem2(dt,dir_x):
+    global desiredWheelRotSpeed
+    global desiredWheelRotSpeed2
+    global d_ar
+    desiredWheelRotSpeed=dt[0]
+    desiredWheelRotSpeed2=dt[1]
+    d_ar=[dt[0],dt[1]]
+    return d_ar
+
 def process(key):
     global dir
     cmnd = []
@@ -81,7 +91,8 @@ def process(key):
     elif key == 'a':
         cmnd = [-1,1,0]
     if len(cmnd)>0:
-        nav_prem_res = nav_prem(cmnd,dir_k)
+        nav_prem_res = nav_prem2(cmnd,dir_k)
+        #nav_prem_res = nav_prem(cmnd,dir_k)
         #if dir_k is not None and dir*dir_k>0:
         #    dir = dir_k
     return nav_prem_res
@@ -94,7 +105,12 @@ def int_chk(s):
         return False
 
 def callback(data):
-    print 'ss',data
+    global nav_mode
+    global save_spd
+    if nav_mode == True and data > 0:
+        print 'true',data.data
+        save_spd = data.data
+        #pub_sp.publish(save_spd)
 
 def listener():
 
@@ -108,8 +124,8 @@ def talker():
     listener()
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
-    global sel
     global acc_dec
+    global save_spd
     pub = rospy.Publisher('leftMotorSpeed', Float32, queue_size=10)
     pub2 = rospy.Publisher('rightMotorSpeed', Float32, queue_size=10)
     rate = rospy.Rate(10) # 10hz
@@ -123,8 +139,8 @@ def talker():
                 break
             print key#, ord(key)
             res=process(key)
-            aa = res[0]
-            bb = res[1]
+            aa = res[0]*save_spd
+            bb = res[1]*save_spd
         else:
             #desiredWheelRotSpeed = desiredWheelRotSpeed2 # - Turn only on KBHIT
             if acc_dec == True:
@@ -136,8 +152,12 @@ def talker():
                     desiredWheelRotSpeed +=.1
                 if desiredWheelRotSpeed2 < 0:
                     desiredWheelRotSpeed2 +=.1
-            aa = desiredWheelRotSpeed
-            bb = desiredWheelRotSpeed2
+            if save_spd is not None:
+                aa = desiredWheelRotSpeed*save_spd
+                bb = desiredWheelRotSpeed2*save_spd
+            else:
+                aa = desiredWheelRotSpeed*0
+                bb = desiredWheelRotSpeed2*0
         #rospy.loginfo(float(aa))
         #print 'A: ',aa
         #print 'B: ',bb
