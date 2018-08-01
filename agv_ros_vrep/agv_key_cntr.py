@@ -33,12 +33,13 @@ desiredWheelRotSpeed2 = 0
 d_ar=[]
 spd = 1 # new speed mode
 save_spd = None
-
+pub_sp = rospy.Publisher('speed', Float32, queue_size=10)
 def nav_prem(dt,dir_x):
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
     global d_ar
     global save_spd
+    global pub_sp
     wheelRotSpeedDx=20*math.pi/180
     if dt[0]*dt[1]<0:
         # TURN
@@ -59,6 +60,7 @@ def nav_prem(dt,dir_x):
         # FORWARD
         # ENC RESET !!!!!!
         d_ar=[desiredWheelRotSpeed,desiredWheelRotSpeed]
+        pub_sp.publish(desiredWheelRotSpeed)
     return d_ar
 
 def process(key):
@@ -91,14 +93,25 @@ def int_chk(s):
     except ValueError:
         return False
 
+def callback(data):
+    print 'ss',data
+
+def listener():
+
+    rospy.Subscriber("speed", Float32, callback)
+
+    # spin() simply keeps python from exiting until this node is stopped
+    #rospy.spin()
+
 def talker():
+    rospy.init_node('rosBubbleRob', anonymous=True)
+    listener()
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
     global sel
     global acc_dec
     pub = rospy.Publisher('leftMotorSpeed', Float32, queue_size=10)
     pub2 = rospy.Publisher('rightMotorSpeed', Float32, queue_size=10)
-    rospy.init_node('rosBubbleRob', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         if kbd.kbhit():
@@ -126,8 +139,8 @@ def talker():
             aa = desiredWheelRotSpeed
             bb = desiredWheelRotSpeed2
         #rospy.loginfo(float(aa))
-        print 'A: ',aa
-        print 'B: ',bb
+        #print 'A: ',aa
+        #print 'B: ',bb
         pub.publish(float(aa))
         pub2.publish(float(bb))
         rate.sleep()

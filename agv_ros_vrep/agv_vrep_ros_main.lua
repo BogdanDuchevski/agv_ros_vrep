@@ -44,6 +44,7 @@ function sysCall_init()
         local simulationTimeTopicName='simTime'--..sysTime -- we add a random component so that we can have several instances of this robot running
         -- Prepare the sensor publisher and the motor speed subscribers:
         speedTopicPub=simROS.advertise('/'..speedTopicName,'std_msgs/Float32')
+        speedTopicSub=simROS.subscribe('/'..speedTopicName,'std_msgs/Float32','set_spd_cb')
         leftEncTopicPub=simROS.advertise('/'..leftEncTopicName,'std_msgs/Float32')
         rightEncTopicPub=simROS.advertise('/'..rightEncTopicName,'std_msgs/Float32')
         sensorPub=simROS.advertise('/'..sensorTopicName,'std_msgs/Bool')
@@ -53,7 +54,21 @@ function sysCall_init()
         -- Now we start the client application:
         --result2=sim.launchExecutable('/home/bad/vrep_pro/src/ros_bubble_rob2/bin/rosBubbleRob2',leftMotorTopicName.." "..rightMotorTopicName.." "..sensorTopicName.." "..simulationTimeTopicName,0)
     end
+end
 
+function abs_b(x)
+	if x < 0 then
+		x = x*(-1)
+	end
+	return(x)
+end
+function set_spd_cb(dt)
+  fctr = minMaxSpeed[1]+(minMaxSpeed[2]-minMaxSpeed[1])
+  if dt.data then
+    speed2=(dt.data*100)/(fctr)
+    sim.addStatusbarMessage("dt : '"..speed2.."'")
+    simUI.setSliderValue(ui,1,abs_b(speed2))
+  end
 end
 function speedChange_callback(ui,id,newVal)
 	speed=minMaxSpeed[1]+(minMaxSpeed[2]-minMaxSpeed[1])*newVal/100
