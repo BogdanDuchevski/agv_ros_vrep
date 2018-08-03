@@ -112,20 +112,8 @@ def callback_spd(data):
         print 'true',data.data
         save_spd = data.data
         #pub_sp.publish(save_spd)
+
 def callback_sim(data):
-    global sim_in
-    sim_in = True
-    #print data.data
-
-def listener():
-    rospy.Subscriber("speed", Float32, callback_spd)
-    rospy.Subscriber("simTime", Float32, callback_sim)
-    #rospy.spin()
-
-def talker():
-    rospy.init_node('rosBubbleRob', anonymous=True)
-    listener()
-    global sim_in
     global desiredWheelRotSpeed
     global desiredWheelRotSpeed2
     global acc_dec
@@ -134,52 +122,55 @@ def talker():
     pub2 = rospy.Publisher('rightMotorSpeed', Float32, queue_size=10)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        if sim_in == True:
-            sim_in = False
-            if kbd.kbhit():
-                key = kbd.getch()
-                termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-                time.sleep(.2)
-                if ord(key) == ESC:
-                    print "ESC - ending test"
-                    kbd.set_normal_term()
-                    break
-                print key#, ord(key)
-                res=process(key)
-                save_spd = 0 if save_spd == None else save_spd
-                aa = res[0]*save_spd
-                bb = res[1]*save_spd
-            else:
-                #desiredWheelRotSpeed = desiredWheelRotSpeed2 # - Turn only on KBHIT
-                if acc_dec == True:
-                    if desiredWheelRotSpeed > 0:
-                        desiredWheelRotSpeed -=.1
-                    if desiredWheelRotSpeed2 > 0:
-                        desiredWheelRotSpeed2 -=.1
-                    if desiredWheelRotSpeed < 0:
-                        desiredWheelRotSpeed +=.1
-                    if desiredWheelRotSpeed2 < 0:
-                        desiredWheelRotSpeed2 +=.1
-                if save_spd is not None:
-                    aa = desiredWheelRotSpeed*save_spd
-                    bb = desiredWheelRotSpeed2*save_spd
-                else:
-                    aa = desiredWheelRotSpeed*0
-                    bb = desiredWheelRotSpeed2*0
-            #rospy.loginfo(float(aa))
-            #print 'A: ',aa
-            #print 'B: ',bb
-            pub.publish(float(aa))
-            pub2.publish(float(bb))
-            rate.sleep()
+        if kbd.kbhit():
+            key = kbd.getch()
+            termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+            if ord(key) == ESC:
+                pub.publish(0.0)
+                pub2.publish(0.0)
+                kbd.set_normal_term()
+                #os.system("rosnode kill "+ rosBubbleRob)
+                rospy.signal_shutdown('Quit')
+                break
+            print key#, ord(key)
+            res=process(key)
+            print 'RES: ', res
+            save_spd = 0 if save_spd == None else save_spd
+            aa = res[0]*save_spd
+            bb = res[1]*save_spd
         else:
-            print 'Vrep Connection Error'
+            if acc_dec == True:
+                if desiredWheelRotSpeed > 0:
+                    desiredWheelRotSpeed -=.1
+                if desiredWheelRotSpeed2 > 0:
+                    desiredWheelRotSpeed2 -=.1
+                if desiredWheelRotSpeed < 0:
+                    desiredWheelRotSpeed +=.1
+                if desiredWheelRotSpeed2 < 0:
+                    desiredWheelRotSpeed2 +=.1
+            if save_spd is not None:
+                aa = desiredWheelRotSpeed*save_spd
+                bb = desiredWheelRotSpeed2*save_spd
+            else:
+                aa = desiredWheelRotSpeed*0
+                bb = desiredWheelRotSpeed2*0
+        #rospy.loginfo(float(aa))
+        #print 'A: ',aa
+        #print 'B: ',bb
+        pub.publish(float(aa))
+        pub2.publish(float(bb))
+        rate.sleep()
 
+def listener():
+    rospy.init_node('rosBubbleRob', anonymous=True)
+    rospy.Subscriber("speed", Float32, callback_spd)
+    rospy.Subscriber("simTime", Float32, callback_sim)
+    rospy.spin()
 
 if __name__ == '__main__':
     kbd = KBHit()
     try:
-        talker()
+        listener()
     except rospy.ROSInterruptException:
         pass
 
